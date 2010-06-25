@@ -1,0 +1,17 @@
+<project name="powerbuilder" default="all">
+
+	<target name="all" depends="compile"/>
+
+	<target name="compile">
+		<mkdir dir="bin/classes"/>
+		<javac srcdir="src" destdir="bin/classes">
+		</javac>
+		<jar jarfile="bin/powerbuilder.jar">
+			<fileset dir="bin/classes"/>
+		</jar>
+	</target>
+	
+	<target name="clean">
+		<delete dir="bin"/>
+	</target>
+</project>
