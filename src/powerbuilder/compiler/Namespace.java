@@ -71,4 +71,10 @@ public class Namespace {
 		}
 		return lf;
 	}
+
+	public void addVariables(List<Variable> vars) {
+		for (Variable v : vars) {
+			addVariable(v);
+		}
+	}
 }

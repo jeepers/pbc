@@ -1,9 +1,13 @@
 package powerbuilder.compiler;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Parser {
 
 	Namespace global;
 	Lexer lexer;
+	Token current;
 	
 	public Parser(Lexer lexer) {
 		this.lexer = lexer;
@@ -18,7 +22,12 @@ public class Parser {
 	private Token nextToken() {
 		Token token = lexer.nextToken();
 		System.err.println(token);
+		current = token;
 		return token;
+	}
+	
+	private Token token() {
+		return current;
 	}
 	
 	private WordToken expectKeyword(Keyword... kw) {
@@ -83,24 +92,11 @@ public class Parser {
 						//declares an event
 					} else {
 						//declares a variable
-						String type = tok.as(WordToken.class).getWord().getWord();
-						tok = nextToken();
-						while (!tok.isEndOfStatement()) {
-							String var = tok.getIdentifier();
-							tok = nextToken();
-							if (tok.isTerminal(Terminal.EQ)) {
-								//initial expression, skip for now
-								tok = nextToken();
-								while (!tok.isEndOfStatement() && !tok.isTerminal(Terminal.COMMA)) {
-									tok = nextToken();
-								}
-							}
-							t.getNamespace().addVariable(new Variable(type, var));
-							if (tok.isTerminal(Terminal.COMMA)) {
-								//another variable of same type
-								tok = nextToken();
-							}
+						List<Variable> vars = parseVariableDeclaration();
+						if (!vars.isEmpty()) {
+							t.getNamespace().addVariables(vars);
 						}
+						tok = token();
 					}
 					if (tok.isEndOfStatement()) {
 						tok = nextToken();
@@ -131,5 +127,28 @@ public class Parser {
 		} else {
 			throw new UnexpectedToken(id);
 		}
+	}
+	
+	private List<Variable> parseVariableDeclaration() {
+		List<Variable> vars = new ArrayList<Variable>();
+		String type = token().as(WordToken.class).getWord().getWord();
+		nextToken();
+		while (!token().isEndOfStatement()) {
+			String var = token().getIdentifier();
+			nextToken();
+			if (token().isTerminal(Terminal.EQ)) {
+				//initial expression, skip for now
+				nextToken();
+				while (!token().isEndOfStatement() && !token().isTerminal(Terminal.COMMA)) {
+					nextToken();
+				}
+			}
+			vars.add(new Variable(type, var));
+			if (token().isTerminal(Terminal.COMMA)) {
+				//another variable of same type
+				nextToken();
+			}
+		}
+		return vars;
 	}
 }
