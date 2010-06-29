@@ -4,7 +4,7 @@
 
 	<target name="compile">
 		<mkdir dir="bin/classes"/>
-		<javac srcdir="src" destdir="bin/classes">
+		<javac srcdir="src" destdir="bin/classes" includeAntRuntime="false">
 		</javac>
 		<jar jarfile="bin/powerbuilder.jar">
 			<fileset dir="bin/classes"/>
