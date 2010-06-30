@@ -57,4 +57,8 @@ public abstract class Token {
 	public boolean isTerminal(Terminal t) {
 		return false;
 	}
+	
+	public boolean isNumber() {
+		return false;
+	}
 }

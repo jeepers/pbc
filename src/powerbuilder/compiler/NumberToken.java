@@ -16,4 +16,8 @@ public class NumberToken extends LiteralToken {
 	public String toString() {
 		return super.toString() + "[number]" + num;
 	}
+	
+	public boolean isNumber() {
+		return true;
+	}
 }

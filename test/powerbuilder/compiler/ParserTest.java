@@ -44,4 +44,25 @@ public class ParserTest extends TestCase {
 		assertNotNull(v);
 		assertEquals("integer", v.getType());
 	}
+	
+	public void testDecimal() {
+		String src = "global type w_test from userobject\r\ndecimal{2} id_x\r\nend type\r\n";
+		Parser parser = doParse(src);
+		Type t = parser.global.getType("w_test");
+		assertNotNull(t);
+		Variable v = t.getNamespace().getVariable("id_x");
+		assertNotNull(v);
+		assertEquals("decimal", v.getType());
+		assertEquals(2, v.getSize());	
+	}
+	
+	public void testArray() {
+		String src = "global type w_test from userobject\r\ninteger iia_arr[5]\r\nend type\r\n";
+		Parser parser = doParse(src);
+		Type t = parser.global.getType("w_test");
+		assertNotNull(t);
+		Variable v = t.getNamespace().getVariable("iia_arr");
+		assertNotNull(v);
+		assertEquals("integer", v.getType());
+	}
 }

@@ -1,12 +1,17 @@
 package powerbuilder.compiler;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
+
+import powerbuilder.compiler.Variable.Access;
 
 public class Parser {
 
 	Namespace global;
 	Lexer lexer;
+	Access currentAccess;
 	Token current;
 	
 	public Parser(Lexer lexer) {
@@ -131,11 +136,28 @@ public class Parser {
 	
 	private List<Variable> parseVariableDeclaration() {
 		List<Variable> vars = new ArrayList<Variable>();
+		Set<Access> access = parseAccess();
 		String type = token().as(WordToken.class).getWord().getWord();
 		nextToken();
+		int size = 0;
+		if (token().isTerminal(Terminal.LBRACE)) {
+			//size or precision
+			nextToken();
+			if (token().isNumber()) {
+				//parse size from number as integer
+				size = Integer.parseInt(token().as(NumberToken.class).getNum());
+			}
+			nextToken().isTerminal(Terminal.RBRACE);
+			nextToken();
+		}
 		while (!token().isEndOfStatement()) {
 			String var = token().getIdentifier();
 			nextToken();
+			if (token().isTerminal(Terminal.LBRACKET)) {
+				//array, skip the bounds for now
+				while (!nextToken().isTerminal(Terminal.RBRACKET));
+				nextToken();
+			}
 			if (token().isTerminal(Terminal.EQ)) {
 				//initial expression, skip for now
 				nextToken();
@@ -143,12 +165,51 @@ public class Parser {
 					nextToken();
 				}
 			}
-			vars.add(new Variable(type, var));
+			vars.add(new Variable(access, type, size, var));
 			if (token().isTerminal(Terminal.COMMA)) {
 				//another variable of same type
 				nextToken();
 			}
 		}
 		return vars;
+	}
+	
+	private Set<Access> parseAccess() {
+		EnumSet<Access> set = EnumSet.noneOf(Access.class);
+		Access last = null;
+		while (true) {
+			if (current.isKeyword(Keyword.GLOBAL)) {
+				set.add(Access.GLOBAL);
+			} else if (current.isKeyword(Keyword.PUBLIC)) {
+				last = Access.PUBLIC;
+				set.add(Access.PUBLIC);
+			} else if (current.isKeyword(Keyword.PROTECTED)) {
+				last = Access.PROTECTED;
+				set.add(Access.PROTECTED);
+			} else if (current.isKeyword(Keyword.PROTECTEDREAD)) {
+				set.add(Access.PROTECTED_READ);
+			} else if (current.isKeyword(Keyword.PROTECTEDWRITE)) {
+				set.add(Access.PROTECTED_WRITE);
+			} else if (current.isKeyword(Keyword.PRIVATE)) {
+				last = Access.PRIVATE;
+				set.add(Access.PRIVATE);
+			} else if (current.isKeyword(Keyword.PRIVATEREAD)) {
+				set.add(Access.PRIVATE_READ);
+			} else if (current.isKeyword(Keyword.PRIVATEWRITE)) {
+				set.add(Access.PRIVATE_WRITE);
+			} else {
+				break;
+			}
+			nextToken();
+		}
+		if (current.isTerminal(Terminal.COLON)) {
+			//setting the default access for following declarations
+			if (last != null) {
+				currentAccess = last;
+			} else {
+				throw new UnexpectedToken(current);
+			}
+		}
+		return set;
 	}
 }
