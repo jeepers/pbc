@@ -1,6 +1,7 @@
 package powerbuilder.compiler;
 
 import java.io.StringReader;
+import java.util.List;
 
 import junit.framework.TestCase;
 
@@ -43,6 +44,7 @@ public class ParserTest extends TestCase {
 		Variable v = t.getNamespace().getVariable("width");
 		assertNotNull(v);
 		assertEquals("integer", v.getType());
+		assertFalse(v.isArray());
 	}
 	
 	public void testDecimal() {
@@ -64,5 +66,87 @@ public class ParserTest extends TestCase {
 		Variable v = t.getNamespace().getVariable("iia_arr");
 		assertNotNull(v);
 		assertEquals("integer", v.getType());
+		assertTrue(v.isArray());
+		assertFalse(v.isUnboundedArray());
+		List<Bound> bounds = v.getBounds();
+		assertNotNull(bounds);
+		assertEquals(1, bounds.size());
+		assertEquals(0, bounds.get(0).getLower());
+		assertEquals(5, bounds.get(0).getUpper());
+		assertEquals(6, bounds.get(0).length());
+	}
+
+	public void testUnboundedArray() {
+		String src = "global type w_test from userobject\r\ninteger iia_arr[]\r\nend type\r\n";
+		Parser parser = doParse(src);
+		Type t = parser.global.getType("w_test");
+		assertNotNull(t);
+		Variable v = t.getNamespace().getVariable("iia_arr");
+		assertNotNull(v);
+		assertEquals("integer", v.getType());
+		assertTrue(v.isArray());
+		assertTrue(v.isUnboundedArray());
+	}
+
+	public void testArrayBounds() {
+		String src = "global type w_test from userobject\r\ninteger iia_arr[1 to 10]\r\nend type\r\n";
+		Parser parser = doParse(src);
+		Type t = parser.global.getType("w_test");
+		assertNotNull(t);
+		Variable v = t.getNamespace().getVariable("iia_arr");
+		assertNotNull(v);
+		assertEquals("integer", v.getType());
+		assertTrue(v.isArray());
+		assertFalse(v.isUnboundedArray());
+		List<Bound> bounds = v.getBounds();
+		assertNotNull(bounds);
+		assertEquals(1, bounds.size());
+		assertEquals(1, bounds.get(0).getLower());
+		assertEquals(10, bounds.get(0).getUpper());
+		assertEquals(10, bounds.get(0).length());
+	}
+	
+	public void testMultiDimArray() {
+		String src = "global type w_test from userobject\r\ninteger iia_arr[3,3]\r\nend type\r\n";
+		Parser parser = doParse(src);
+		Type t = parser.global.getType("w_test");
+		assertNotNull(t);
+		Variable v = t.getNamespace().getVariable("iia_arr");
+		assertNotNull(v);
+		assertEquals("integer", v.getType());
+		assertTrue(v.isArray());
+		assertFalse(v.isUnboundedArray());
+		List<Bound> bounds = v.getBounds();
+		assertNotNull(bounds);
+		assertEquals(2, bounds.size());
+		assertEquals(0, bounds.get(0).getLower());
+		assertEquals(3, bounds.get(0).getUpper());
+		assertEquals(4, bounds.get(0).length());
+		assertEquals(0, bounds.get(1).getLower());
+		assertEquals(3, bounds.get(1).getUpper());
+		assertEquals(4, bounds.get(1).length());
+	}
+
+	public void testMultiDimArrayBounds() {
+		String src = "global type w_test from userobject\r\n"
+			+ "integer iia_arr[1 TO 3, 1 TO 4]\r\n"
+			+ "end type\r\n";
+		Parser parser = doParse(src);
+		Type t = parser.global.getType("w_test");
+		assertNotNull(t);
+		Variable v = t.getNamespace().getVariable("iia_arr");
+		assertNotNull(v);
+		assertEquals("integer", v.getType());
+		assertTrue(v.isArray());
+		assertFalse(v.isUnboundedArray());
+		List<Bound> bounds = v.getBounds();
+		assertNotNull(bounds);
+		assertEquals(2, bounds.size());
+		assertEquals(1, bounds.get(0).getLower());
+		assertEquals(3, bounds.get(0).getUpper());
+		assertEquals(3, bounds.get(0).length());
+		assertEquals(1, bounds.get(1).getLower());
+		assertEquals(4, bounds.get(1).getUpper());
+		assertEquals(4, bounds.get(1).length());
 	}
 }

@@ -1,0 +1,113 @@
+assignmentStatement
+	:	conditionalExpression assignmentOperator expression
+	|	conditionalExpression '++'
+	|	conditionalExpression '--'
+	;
+
+assignmentOperator
+    :   '='
+    |   '+='
+    |   '-='
+    |   '*='
+    |   '/='
+    |   '^='
+    ;
+
+// EXPRESSIONS
+
+parExpression
+    :   '(' expression ')'
+    ;
+    
+expressionList
+    :   expression (',' expression)*
+    ;
+
+statementExpression
+    :   expression
+    ;
+    
+constantExpression
+    :   expression
+    ;
+    
+expression
+    :   conditionalExpression
+    ;
+    
+conditionalExpression
+    :   inclusiveOrExpression
+    ;
+
+inclusiveOrExpression
+    :   andExpression ( 'or' andExpression )*
+    ;
+
+andExpression
+    :   negationExpression ( 'and' negationExpression )*
+    ;
+
+negationExpression
+	:	'not'? relationalExpression
+	;
+
+
+relationalExpression
+    :   additiveExpression ( relationalOp additiveExpression )*
+    ;
+    
+relationalOp
+    :   '='
+    |	'<>'
+    |	'<='
+    |   '>='
+    |   '<' 
+    |   '>' 
+    ;
+
+additiveExpression
+    :   multiplicativeExpression ( ('+' | '-') multiplicativeExpression )*
+    ;
+
+multiplicativeExpression
+    :   exponentExpression ( ( '*' | '/' ) exponentExpression )*
+    ;
+    
+exponentExpression
+    :   unaryExpression ( '^' unaryExpression )*
+    ;
+
+unaryExpression
+    :   '+' unaryExpression
+    |   '-' unaryExpression
+    |	primary selector*
+    ;
+
+primary
+    :   parExpression
+    |   'this' ('.' Identifier)* identifierSuffix?
+    |	'parent' ('.' Identifier)* identifierSuffix?
+    |   'super' superSuffix
+    |   literal
+    |   'create' Identifier
+    |   Identifier ('.' Identifier)* identifierSuffix?
+    ;
+
+identifierSuffix
+    :   
+    |   '[' expression ( ',' expression )* ']'
+    |   arguments
+    ;
+
+selector
+    :   '.' Identifier arguments?
+    |   '[' expression ( ',' expression )* ']'
+    ;
+
+superSuffix
+    :   '::' Identifier arguments?
+    ;
+
+arguments
+    :   '(' expressionList? ')'
+    ;

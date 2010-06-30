@@ -145,7 +145,7 @@ public class Parser {
 			nextToken();
 			if (token().isNumber()) {
 				//parse size from number as integer
-				size = Integer.parseInt(token().as(NumberToken.class).getNum());
+				size = token().as(NumberToken.class).getInt();
 			}
 			nextToken().isTerminal(Terminal.RBRACE);
 			nextToken();
@@ -153,9 +153,32 @@ public class Parser {
 		while (!token().isEndOfStatement()) {
 			String var = token().getIdentifier();
 			nextToken();
+			List<Bound> bounds = null;
 			if (token().isTerminal(Terminal.LBRACKET)) {
-				//array, skip the bounds for now
-				while (!nextToken().isTerminal(Terminal.RBRACKET));
+				//array
+				bounds = new ArrayList<Bound>();
+				nextToken();
+				while (!token().isTerminal(Terminal.RBRACKET)) {
+					if (token().isNumber()) {
+						//length or bound
+						int b = token().as(NumberToken.class).getInt();
+						if (nextToken().isKeyword(Keyword.TO)) { 
+							int ub = nextToken().as(NumberToken.class).getInt();
+							if (ub <= b) {
+								throw new SyntaxError("Array upper bound must be greater than the lower bound", token());
+							}
+							bounds.add(new Bound(b, ub));
+							nextToken();
+						} else {
+							if (b <= 0) {
+								throw new SyntaxError("Array size must be greater than zero", token());
+							}
+							bounds.add(new Bound(b));
+						}
+					} else if (token().isTerminal(Terminal.COMMA)) {
+						nextToken();
+					}
+				}
 				nextToken();
 			}
 			if (token().isTerminal(Terminal.EQ)) {
@@ -165,7 +188,7 @@ public class Parser {
 					nextToken();
 				}
 			}
-			vars.add(new Variable(access, type, size, var));
+			vars.add(new Variable(access, type, size, var, bounds));
 			if (token().isTerminal(Terminal.COMMA)) {
 				//another variable of same type
 				nextToken();
