@@ -91,17 +91,18 @@ primary
     |   literal
     |   'create' Identifier
     |   Identifier ('.' Identifier)* identifierSuffix?
+    |	arrayInitialiser
     ;
 
 identifierSuffix
     :   
-    |   '[' expression ( ',' expression )* ']'
+    |   '[' expressionList']'
     |   arguments
     ;
 
 selector
     :   '.' Identifier arguments?
-    |   '[' expression ( ',' expression )* ']'
+    |   '[' expressionList ']'
     ;
 
 superSuffix
@@ -111,3 +112,7 @@ superSuffix
 arguments
     :   '(' expressionList? ')'
     ;
+
+arrayInitialiser
+	:	'{' expressionList '}'
+	;

@@ -16,4 +16,9 @@ public class StringToken extends LiteralToken {
 	public String toString() {
 		return super.toString() + "[string]" + string;
 	}
+
+	@Override
+	public Object getValue() {
+		return string;
+	}
 }

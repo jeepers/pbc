@@ -62,4 +62,15 @@ public class NumberToken extends LiteralToken {
 	public boolean isReal() {
 		return num.matches("\\d+(\\.\\d+)?[eE][+-]?\\d+");
 	}
+
+	@Override
+	public Object getValue() {
+		if (isIntegral()) {
+			return getLong();
+		} else if (isDecimal()) {
+			return getDecimal();
+		} else {
+			return getReal();
+		}
+	}
 }

@@ -35,65 +35,57 @@ public class Parser {
 		return current;
 	}
 	
-	private WordToken expectKeyword(Keyword... kw) {
-		Token tok = nextToken();
-		if (tok instanceof WordToken) {
-			WordToken wt = (WordToken) tok;
-			if (wt.isKeyword()) {
-				for (Keyword w : kw) {
-					if (wt.is(w)) {
-						return wt;
-					}
-				}
-			}
+	private void expectKeyword(Keyword kw) {
+		if (!token().isKeyword(kw)) {
+			throw new UnexpectedToken(token());
 		}
-		throw new UnexpectedToken(tok);
 	}
 	
 	public Namespace parse() {
 		//typically start with a global type or a forward
-		WordToken tok = expectKeyword(Keyword.GLOBAL, Keyword.FORWARD);
-		if (tok != null) {
-			if (tok.is(Keyword.GLOBAL)) {
-				parseGlobalType(false);
-			} else if (tok.is(Keyword.FORWARD)) {
-				parseForward();
-			}
+		nextToken();
+		if (token().isKeyword(Keyword.GLOBAL)) {
+			parseGlobalType(false);
+		} else if (token().isKeyword(Keyword.FORWARD)) {
+			parseForward();
 		}
 		return global;
 	}
 
 	private void parseForward() {
-		// TODO Auto-generated method stub
-		parseGlobalType(true);
+		nextToken();
+		if (token().isKeyword(Keyword.PROTOTYPES)) {
+			//function prototypes
+		} else {
+			parseGlobalType(true);
+		}
 	}
 
 	private void parseGlobalType(boolean forward) {
+		nextToken();
 		expectKeyword(Keyword.TYPE);
 		Token id = nextToken();
 		if (id.isIdentifier()) {
 			String name = id.as(WordToken.class).getWord().getWord();
-			Token tok = nextToken();
+			nextToken();
 			String superClass = null;
-			if (tok.isA(WordToken.class)) {
-				if (tok.isKeyword(Keyword.FROM)) {
-					superClass = nextToken().as(WordToken.class).getWord().getWord();
-					tok = nextToken();
-				}
+			if (token().isKeyword(Keyword.FROM)) {
+				superClass = nextToken().as(WordToken.class).getWord().getWord();
+				nextToken();
 			}
 			Type t = new Type(name, superClass);
 			if (!forward) {
-				if (tok.isKeyword(Keyword.AUTOINSTANTIATE)) {
+				if (token().isKeyword(Keyword.AUTOINSTANTIATE)) {
 					t.setAutoInstantiate(true);
-					tok = nextToken();
+					nextToken();
 				}
-				if (tok.isEndOfStatement()) {
+				if (token().isEndOfStatement()) {
 					//end of declaration
-					tok = nextToken();
+					nextToken();
 				}
-				while (!tok.isKeyword(Keyword.END)) {
+				while (!token().isKeyword(Keyword.END)) {
 					//declarations - variables, events
-					if (tok.isKeyword(Keyword.EVENT)) {
+					if (token().isKeyword(Keyword.EVENT)) {
 						//declares an event
 					} else {
 						//declares a variable
@@ -101,19 +93,18 @@ public class Parser {
 						if (!vars.isEmpty()) {
 							t.getNamespace().addVariables(vars);
 						}
-						tok = token();
 					}
-					if (tok.isEndOfStatement()) {
-						tok = nextToken();
+					if (token().isEndOfStatement()) {
+						nextToken();
 					}
 				}
 			} else {
-				if (tok.isEndOfStatement()) {
+				if (token().isEndOfStatement()) {
 					//end of declaration
-					tok = nextToken();
+					nextToken();
 				}
 				//may be inner types
-				while (tok.isKeyword(Keyword.TYPE)) {
+				while (token().isKeyword(Keyword.TYPE)) {
 					//type name from super within parent
 					String n = nextToken().getIdentifier();
 					expectKeyword(Keyword.FROM);
@@ -123,10 +114,12 @@ public class Parser {
 					t.getNamespace().addType(new Type(n, sc, pc));
 					nextToken().isEndOfStatement();
 					expectKeyword(Keyword.END);
+					nextToken();
 					expectKeyword(Keyword.TYPE);
 				}
 			}
-			tok.isKeyword(Keyword.END);
+			token().isKeyword(Keyword.END);
+			nextToken();
 			expectKeyword(Keyword.TYPE);
 			global.addType(t);
 		} else {
@@ -159,11 +152,12 @@ public class Parser {
 				bounds = new ArrayList<Bound>();
 				nextToken();
 				while (!token().isTerminal(Terminal.RBRACKET)) {
-					if (token().isNumber()) {
+					if (maybeSignedInteger()) {
 						//length or bound
-						int b = token().as(NumberToken.class).getInt();
-						if (nextToken().isKeyword(Keyword.TO)) { 
-							int ub = nextToken().as(NumberToken.class).getInt();
+						int b = signedInteger();
+						if (nextToken().isKeyword(Keyword.TO)) {
+							nextToken();
+							int ub = signedInteger();
 							if (ub <= b) {
 								throw new SyntaxError("Array upper bound must be greater than the lower bound", token());
 							}
@@ -195,6 +189,19 @@ public class Parser {
 			}
 		}
 		return vars;
+	}
+	
+	private boolean maybeSignedInteger() {
+		return token().isNumber() || token().isTerminal(Terminal.SUB);
+	}
+	
+	private int signedInteger() {
+		boolean negate = false;
+		if (token().isTerminal(Terminal.SUB)) {
+			negate = true;
+			nextToken();
+		}
+		return token().as(NumberToken.class).getInt() * (negate ? -1 : 1);
 	}
 	
 	private Set<Access> parseAccess() {

@@ -9,11 +9,16 @@ public class TimeToken extends LiteralToken {
 		this.time = num;
 	}
 
-	public String getDate() {
+	public String getTime() {
 		return time;
 	}
 
 	public String toString() {
 		return super.toString() + "[time]" + time;
+	}
+
+	@Override
+	public Object getValue() {
+		return time;
 	}
 }

@@ -61,4 +61,8 @@ public abstract class Token {
 	public boolean isNumber() {
 		return false;
 	}
+	
+	public boolean isLiteral() {
+		return false;
+	}
 }

@@ -6,4 +6,9 @@ public abstract class LiteralToken extends Token {
 		super(l, c);
 	}
 
+	public abstract Object getValue();
+	
+	public boolean isLiteral() {
+		return true;
+	}
 }

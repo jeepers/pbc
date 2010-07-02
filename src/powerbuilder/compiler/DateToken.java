@@ -16,4 +16,9 @@ public class DateToken extends LiteralToken {
 	public String toString() {
 		return super.toString() + "[date]" + date;
 	}
+
+	@Override
+	public Object getValue() {
+		return date;
+	}
 }

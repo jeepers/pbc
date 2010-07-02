@@ -149,4 +149,24 @@ public class ParserTest extends TestCase {
 		assertEquals(4, bounds.get(1).getUpper());
 		assertEquals(4, bounds.get(1).length());
 	}
+	
+	public void testNegativeBounds() {
+		String src = "global type w_test from userobject\r\n"
+			+ "integer iia_arr[-5 to 5]\r\n"
+			+ "end type\r\n";
+		Parser parser = doParse(src);
+		Type t = parser.global.getType("w_test");
+		assertNotNull(t);
+		Variable v = t.getNamespace().getVariable("iia_arr");
+		assertNotNull(v);
+		assertEquals("integer", v.getType());
+		assertTrue(v.isArray());
+		assertFalse(v.isUnboundedArray());
+		List<Bound> bounds = v.getBounds();
+		assertNotNull(bounds);
+		assertEquals(1, bounds.size());
+		assertEquals(-5, bounds.get(0).getLower());
+		assertEquals(5, bounds.get(0).getUpper());
+		assertEquals(11, bounds.get(0).length());		
+	}
 }
