@@ -1,0 +1,5 @@
+package powerbuilder.compiler;
+
+public enum Access {
+	GLOBAL, PUBLIC, PROTECTED, PROTECTED_READ, PROTECTED_WRITE, PRIVATE, PRIVATE_READ, PRIVATE_WRITE 
+}

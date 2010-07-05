@@ -5,7 +5,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-import powerbuilder.compiler.Variable.Access;
 
 public class Parser {
 
@@ -41,11 +40,17 @@ public class Parser {
 		}
 	}
 	
+	private void expectEndOfStatement() {
+		if (!token().isEndOfStatement()) {
+			throw new UnexpectedToken(token());
+		}
+	}
+	
 	public Namespace parse() {
 		//typically start with a global type or a forward
 		nextToken();
-		if (token().isKeyword(Keyword.GLOBAL)) {
-			parseGlobalType(false);
+		if (token().isKeyword(Keyword.GLOBAL) && nextToken().isKeyword(Keyword.TYPE)) {
+			global.addType(parseType(false));
 		} else if (token().isKeyword(Keyword.FORWARD)) {
 			parseForward();
 		}
@@ -55,25 +60,104 @@ public class Parser {
 	private void parseForward() {
 		nextToken();
 		if (token().isKeyword(Keyword.PROTOTYPES)) {
-			//function prototypes
-		} else {
-			parseGlobalType(true);
+			parsePrototypes();
+		} else if (token().isKeyword(Keyword.GLOBAL)) {
+			nextToken();
+			if (token().isKeyword(Keyword.TYPE)) {
+				global.addType(parseType(true));
+			}
+			nextToken();
+			while (!token().isKeyword(Keyword.END)) {
+				Set<Access> access = parseAccess();
+				if (token().isKeyword(Keyword.TYPE)) {
+					Type t = parseType(true);
+					if (access.contains(Access.GLOBAL)) {
+						global.addType(t);
+					} else {
+						if (t.getParentClass() != null) {
+							Type parent = global.getType(t.getParentClass());
+							parent.getNamespace().addType(t);
+						}
+					}
+				} else {
+					List<Variable> vars = parseVariableDeclaration();
+					if (access.contains(Access.GLOBAL)) {
+						global.addVariables(vars);
+					}
+				}
+			}
+			nextToken();
+			expectKeyword(Keyword.FORWARD);
 		}
 	}
 
-	private void parseGlobalType(boolean forward) {
+	protected List<Function> parsePrototypes() {
+		List<Function> functions = new ArrayList<Function>();
 		nextToken();
-		expectKeyword(Keyword.TYPE);
+		expectEndOfStatement();
+		//function prototypes
+		nextToken();
+		while (!token().isKeyword(Keyword.END)) {
+			Function f = parseFunction(true);
+			//don't really belong here
+			functions.add(f);
+		}
+		nextToken();
+		expectKeyword(Keyword.PROTOTYPES);
+		nextToken();
+		expectEndOfStatement();
+		return functions;
+	}
+	
+	private Function parseFunction(boolean forward) {
+		Set<Access> access = parseAccess();
+		String returnType = null;
+		if (token().isKeyword(Keyword.FUNCTION)) {
+			returnType = nextToken().getIdentifier();
+		} else {
+			expectKeyword(Keyword.SUBROUTINE);
+		}
+		String name = nextToken().getIdentifier();
+		Function func = new Function(access, returnType, name);
+		if (!nextToken().isTerminal(Terminal.LPAREN)) {
+			throw new UnexpectedToken(token());
+		}
+		nextToken();
+		while (!token().isTerminal(Terminal.RPAREN)) {
+			//parameters
+			DeclaredType dec = parseDeclaredType();
+			String param = token().getIdentifier();
+			nextToken();
+			List<Bound> bounds = parseBounds();
+			func.addParameter(new Variable(null, dec.type, dec.size, param, bounds));
+			if (token().isTerminal(Terminal.COMMA)) {
+				nextToken();
+			}
+		}
+		nextToken();
+		if (forward) {
+			expectEndOfStatement();
+			nextToken();
+		}
+		return func;
+	}
+
+	private Type parseType(boolean forward) {
 		Token id = nextToken();
 		if (id.isIdentifier()) {
 			String name = id.as(WordToken.class).getWord().getWord();
 			nextToken();
 			String superClass = null;
 			if (token().isKeyword(Keyword.FROM)) {
-				superClass = nextToken().as(WordToken.class).getWord().getWord();
+				superClass = nextToken().getIdentifier();
 				nextToken();
 			}
-			Type t = new Type(name, superClass);
+			String parentClass = null;
+			if (token().isKeyword(Keyword.WITHIN)) {
+				parentClass = nextToken().getIdentifier();
+				nextToken();
+			}
+			Type t = new Type(name, superClass, parentClass);
 			if (!forward) {
 				if (token().isKeyword(Keyword.AUTOINSTANTIATE)) {
 					t.setAutoInstantiate(true);
@@ -103,33 +187,27 @@ public class Parser {
 					//end of declaration
 					nextToken();
 				}
-				//may be inner types
-				while (token().isKeyword(Keyword.TYPE)) {
-					//type name from super within parent
-					String n = nextToken().getIdentifier();
-					expectKeyword(Keyword.FROM);
-					String sc = nextToken().getIdentifier();
-					expectKeyword(Keyword.WITHIN);
-					String pc = nextToken().getIdentifier();
-					t.getNamespace().addType(new Type(n, sc, pc));
-					nextToken().isEndOfStatement();
-					expectKeyword(Keyword.END);
-					nextToken();
-					expectKeyword(Keyword.TYPE);
-				}
 			}
 			token().isKeyword(Keyword.END);
 			nextToken();
 			expectKeyword(Keyword.TYPE);
-			global.addType(t);
+			return t;
 		} else {
 			throw new UnexpectedToken(id);
 		}
 	}
 	
-	private List<Variable> parseVariableDeclaration() {
-		List<Variable> vars = new ArrayList<Variable>();
-		Set<Access> access = parseAccess();
+	static class DeclaredType {
+		String type;
+		int size;
+		
+		DeclaredType(String t, int z) {
+			type = t;
+			size = z;
+		}
+	}
+	
+	private DeclaredType parseDeclaredType() {
 		String type = token().as(WordToken.class).getWord().getWord();
 		nextToken();
 		int size = 0;
@@ -143,38 +221,17 @@ public class Parser {
 			nextToken().isTerminal(Terminal.RBRACE);
 			nextToken();
 		}
+		return new DeclaredType(type, size);
+	}
+	
+	private List<Variable> parseVariableDeclaration() {
+		List<Variable> vars = new ArrayList<Variable>();
+		Set<Access> access = parseAccess();
+		DeclaredType dec = parseDeclaredType();
 		while (!token().isEndOfStatement()) {
 			String var = token().getIdentifier();
 			nextToken();
-			List<Bound> bounds = null;
-			if (token().isTerminal(Terminal.LBRACKET)) {
-				//array
-				bounds = new ArrayList<Bound>();
-				nextToken();
-				while (!token().isTerminal(Terminal.RBRACKET)) {
-					if (maybeSignedInteger()) {
-						//length or bound
-						int b = signedInteger();
-						if (nextToken().isKeyword(Keyword.TO)) {
-							nextToken();
-							int ub = signedInteger();
-							if (ub <= b) {
-								throw new SyntaxError("Array upper bound must be greater than the lower bound", token());
-							}
-							bounds.add(new Bound(b, ub));
-							nextToken();
-						} else {
-							if (b <= 0) {
-								throw new SyntaxError("Array size must be greater than zero", token());
-							}
-							bounds.add(new Bound(b));
-						}
-					} else if (token().isTerminal(Terminal.COMMA)) {
-						nextToken();
-					}
-				}
-				nextToken();
-			}
+			List<Bound> bounds = parseBounds();
 			if (token().isTerminal(Terminal.EQ)) {
 				//initial expression, skip for now
 				nextToken();
@@ -182,13 +239,46 @@ public class Parser {
 					nextToken();
 				}
 			}
-			vars.add(new Variable(access, type, size, var, bounds));
+			vars.add(new Variable(access, dec.type, dec.size, var, bounds));
 			if (token().isTerminal(Terminal.COMMA)) {
 				//another variable of same type
 				nextToken();
 			}
 		}
 		return vars;
+	}
+	
+	private List<Bound> parseBounds() {
+		List<Bound> bounds = null;
+		if (token().isTerminal(Terminal.LBRACKET)) {
+			//array
+			bounds = new ArrayList<Bound>();
+			nextToken();
+			while (!token().isTerminal(Terminal.RBRACKET)) {
+				if (maybeSignedInteger()) {
+					//length or bound
+					int b = signedInteger();
+					if (nextToken().isKeyword(Keyword.TO)) {
+						nextToken();
+						int ub = signedInteger();
+						if (ub <= b) {
+							throw new SyntaxError("Array upper bound must be greater than the lower bound", token());
+						}
+						bounds.add(new Bound(b, ub));
+						nextToken();
+					} else {
+						if (b <= 0) {
+							throw new SyntaxError("Array size must be greater than zero", token());
+						}
+						bounds.add(new Bound(b));
+					}
+				} else if (token().isTerminal(Terminal.COMMA)) {
+					nextToken();
+				}
+			}
+			nextToken();
+		}
+		return bounds;
 	}
 	
 	private boolean maybeSignedInteger() {
@@ -208,37 +298,38 @@ public class Parser {
 		EnumSet<Access> set = EnumSet.noneOf(Access.class);
 		Access last = null;
 		while (true) {
-			if (current.isKeyword(Keyword.GLOBAL)) {
+			if (token().isKeyword(Keyword.GLOBAL)) {
 				set.add(Access.GLOBAL);
-			} else if (current.isKeyword(Keyword.PUBLIC)) {
+			} else if (token().isKeyword(Keyword.PUBLIC)) {
 				last = Access.PUBLIC;
 				set.add(Access.PUBLIC);
-			} else if (current.isKeyword(Keyword.PROTECTED)) {
+			} else if (token().isKeyword(Keyword.PROTECTED)) {
 				last = Access.PROTECTED;
 				set.add(Access.PROTECTED);
-			} else if (current.isKeyword(Keyword.PROTECTEDREAD)) {
+			} else if (token().isKeyword(Keyword.PROTECTEDREAD)) {
 				set.add(Access.PROTECTED_READ);
-			} else if (current.isKeyword(Keyword.PROTECTEDWRITE)) {
+			} else if (token().isKeyword(Keyword.PROTECTEDWRITE)) {
 				set.add(Access.PROTECTED_WRITE);
-			} else if (current.isKeyword(Keyword.PRIVATE)) {
+			} else if (token().isKeyword(Keyword.PRIVATE)) {
 				last = Access.PRIVATE;
 				set.add(Access.PRIVATE);
-			} else if (current.isKeyword(Keyword.PRIVATEREAD)) {
+			} else if (token().isKeyword(Keyword.PRIVATEREAD)) {
 				set.add(Access.PRIVATE_READ);
-			} else if (current.isKeyword(Keyword.PRIVATEWRITE)) {
+			} else if (token().isKeyword(Keyword.PRIVATEWRITE)) {
 				set.add(Access.PRIVATE_WRITE);
 			} else {
 				break;
 			}
 			nextToken();
 		}
-		if (current.isTerminal(Terminal.COLON)) {
+		if (token().isTerminal(Terminal.COLON)) {
 			//setting the default access for following declarations
 			if (last != null) {
 				currentAccess = last;
 			} else {
 				throw new UnexpectedToken(current);
 			}
+			nextToken();
 		}
 		return set;
 	}

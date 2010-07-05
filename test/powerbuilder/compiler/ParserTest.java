@@ -7,8 +7,12 @@ import junit.framework.TestCase;
 
 public class ParserTest extends TestCase {
 
+	private Parser newParser(String src) {
+		return new Parser(new Lexer(new StringReader(src)));
+	}
+	
 	private Parser doParse(String src) {
-		Parser parser = new Parser(new Lexer(new StringReader(src)));
+		Parser parser = newParser(src);
 		parser.parse();
 		return parser;
 	}
@@ -168,5 +172,22 @@ public class ParserTest extends TestCase {
 		assertEquals(-5, bounds.get(0).getLower());
 		assertEquals(5, bounds.get(0).getUpper());
 		assertEquals(11, bounds.get(0).length());		
+	}
+	
+	public void testFunctionPrototypes() {
+		String src = "\r\npublic function string of_getpref (integer ai_preference_id)\r\n"
+			+ "public subroutine of_setprefs ()\r\n"
+			+ "end prototypes";
+		Parser parser = newParser(src);
+		List<Function> f = parser.parsePrototypes();
+		assertEquals(2, f.size());
+		assertEquals("string", f.get(0).returns);
+		assertEquals("of_getpref", f.get(0).name);
+		assertEquals(1, f.get(0).parameters.size());
+		assertEquals("integer", f.get(0).parameters.get(0).getType());
+		assertEquals("ai_preference_id", f.get(0).parameters.get(0).getName());
+		assertNull(f.get(1).returns);
+		assertEquals("of_setprefs", f.get(1).name);
+		assertEquals(0, f.get(1).parameters.size());
 	}
 }

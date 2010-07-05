@@ -8,6 +8,11 @@ public class Terminal {
 			return "<EOL>";
 		}
 	};
+	public static final Terminal EOF = new Terminal("\0") {
+		public String toString() {
+			return "<EOF>";
+		}
+	};
 	public static final Terminal ADD = new Terminal("+");
 	public static final Terminal SUB = new Terminal("-");
 	public static final Terminal MULT = new Terminal("*");

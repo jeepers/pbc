@@ -1,7 +1,8 @@
 package powerbuilder.compiler;
 
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.StringReader;
 
 import junit.framework.TestCase;
@@ -73,7 +74,7 @@ public class LexerTest extends TestCase {
 	}
 	
 	public void testFile() throws IOException {
-		FileReader file = new FileReader("C:\\work\\git-home\\epass_root\\epass\\BackOffice\\epass\\f_date_add.srf");
+		Reader file = new InputStreamReader(getClass().getResourceAsStream("f_getpref.srf"));
 		Lexer lexer = new Lexer(file);
 		printTokenStream(lexer);
 	}

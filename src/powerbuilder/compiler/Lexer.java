@@ -99,8 +99,8 @@ public class Lexer {
 	
 	public Token nextToken() {
 		char c = nextNonWSChar();
-		if (c == 0) {
-			return null;
+		if (c == (char) -1) {
+			return new TerminalToken(Terminal.EOF, line, col);
 		}
 		int sl = line;
 		int sc = col;

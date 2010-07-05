@@ -29,7 +29,7 @@ public abstract class Token {
 	public boolean isEndOfStatement() {
 		if (isA(TerminalToken.class)) {
 			Terminal t = as(TerminalToken.class).getTerminal();
-			return t == Terminal.EOL || t == Terminal.SEMI;
+			return t == Terminal.EOL || t == Terminal.SEMI || t == Terminal.EOF;
 		}
 		return false;
 	}

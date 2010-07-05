@@ -2,7 +2,6 @@ package powerbuilder.compiler;
 
 import java.util.EnumSet;
 
-import powerbuilder.compiler.Variable.Access;
 
 public class Builtins {
 
@@ -32,7 +31,7 @@ public class Builtins {
 		//object types
 		Type powerobject = new Type("powerobject");
 		powerobject.getNamespace().addVariable(new Variable(EnumSet.of(Access.PUBLIC, Access.PRIVATE_WRITE), "powerobject", 0, "classdefinition", null));
-		powerobject.getNamespace().addFunction(new Function("string", "classname"));
+		powerobject.getNamespace().addFunction(new Function(EnumSet.of(Access.PUBLIC), "string", "classname"));
 		instance.addType(powerobject);
 	}
 
