@@ -1,4 +1,4 @@
-$PBExportHeader$f_getpref.srf
+HA$PBExportHeader$f_getpref.srf
 global type f_getpref from function_object
 end type
 
@@ -6,9 +6,10 @@ forward prototypes
 global function string f_getpref (integer ai_pref)
 end prototypes
 
-global function string f_getpref (integer ai_pref);if not isvalid(gnv_app) then return '{ Preference '+string(ai_pref)+' }' // development
-if not isvalid(gnv_app.inv_prefs) then return ''
-return gnv_app.inv_prefs.of_getpref(ai_pref)
+global function string f_getpref (integer ai_pref);
+if not IsValid(gnv_app) then return '{ Preference ' + String(ai_pref) + ' }' // development
+if not IsValid(gnv_app.inv_prefs) then return ''
 
+return gnv_app.inv_prefs.of_GetPref('USER', gnv_app.of_GetUserID(), ai_pref, false)
 end function
 

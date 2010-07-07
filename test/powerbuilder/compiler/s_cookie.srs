@@ -1,4 +1,4 @@
-$PBExportHeader$s_cookie.srs
+HA$PBExportHeader$s_cookie.srs
 global type s_cookie from structure
 	string		name
 	string		value
